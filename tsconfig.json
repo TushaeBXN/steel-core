@@ -9,7 +9,13 @@
     "esModuleInterop": true,
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
-    "resolveJsonModule": true
+    "resolveJsonModule": true,
+    "paths": {
+      "@steel-core/core": ["./packages/core/src/parser.ts"],
+      "@steel-core/generator-python": ["./packages/generators/python/src/index.ts"],
+      "@steel-core/generator-typescript": ["./packages/generators/typescript/src/index.ts"],
+      "@steel-core/mcp-server": ["./packages/mcp-server/src/index.ts"]
+    }
   },
   "include": ["packages/**/*"],
   "exclude": ["node_modules", "dist"]
