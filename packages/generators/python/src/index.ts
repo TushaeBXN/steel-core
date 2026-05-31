@@ -1,22 +1,127 @@
 import * as fs from 'fs';
 import * as path from 'path';
-import { OpenAPISpec, OpenAPIParser } from '@steel-core/core';
+import { OpenAPISpec, OpenAPIParser, SchemaObject, ResolvedModel } from '@steel-core/core';
 
 export default class PythonGenerator {
+  private parser!: OpenAPIParser;
+
   async generate(spec: OpenAPISpec, outputDir: string): Promise<void> {
     fs.mkdirSync(outputDir, { recursive: true });
+    this.parser = new OpenAPIParser();
+    this.parser.parse(spec);
 
-    const parser = new OpenAPIParser();
-    const operations = parser.getOperations(spec);
+    const models = this.parser.getModels();
+    const operations = this.parser.getOperations(spec);
     const className = this.toClassName(spec.info.title);
 
-    const clientCode = this.renderClient(className, spec, operations);
-    fs.writeFileSync(path.join(outputDir, 'client.py'), clientCode);
-    fs.writeFileSync(path.join(outputDir, '__init__.py'), `from .client import ${className}\n\n__all__ = ["${className}"]\n`);
+    fs.writeFileSync(path.join(outputDir, 'models.py'), this.renderModels(models));
+    fs.writeFileSync(path.join(outputDir, 'client.py'), this.renderClient(className, spec, operations));
+    fs.writeFileSync(path.join(outputDir, '__init__.py'),
+      `from .client import ${className}\nfrom .models import *\n\n__all__ = ["${className}"]\n`);
     fs.writeFileSync(path.join(outputDir, 'requirements.txt'), 'httpx>=0.27.0\n');
 
-    console.log(`  Created: client.py, __init__.py, requirements.txt`);
+    console.log(`  Created: models.py, client.py, __init__.py, requirements.txt`);
   }
+
+  // ── Model rendering ──────────────────────────────────────────────────────
+
+  private renderModels(models: ResolvedModel[]): string {
+    const lines: string[] = [
+      '"""Auto-generated models — do not edit manually."""',
+      'from __future__ import annotations',
+      'from dataclasses import dataclass, field',
+      'from typing import Any, List, Optional, Union',
+      '',
+    ];
+
+    for (const model of models) {
+      lines.push(...this.renderModel(model.name, model.schema));
+      lines.push('');
+    }
+
+    return lines.join('\n');
+  }
+
+  private renderModel(name: string, schema: SchemaObject): string[] {
+    // Enum
+    if (schema.enum) {
+      return [
+        `class ${name}:`,
+        ...schema.enum.map((v) => `    ${String(v).toUpperCase().replace(/[^A-Z0-9]/g, '_')} = ${JSON.stringify(v)}`),
+      ];
+    }
+
+    // oneOf / anyOf → type alias
+    if (schema.oneOf ?? schema.anyOf) {
+      const variants = (schema.oneOf ?? schema.anyOf)!
+        .map((s) => this.schemaToType(s))
+        .join(', ');
+      return [`${name} = Union[${variants}]`];
+    }
+
+    // Object → dataclass
+    const props = schema.properties ?? {};
+    const required = new Set(schema.required ?? []);
+    const fields: string[] = [];
+
+    // Required fields first, then optional
+    const sortedProps = [
+      ...Object.entries(props).filter(([k]) => required.has(k)),
+      ...Object.entries(props).filter(([k]) => !required.has(k)),
+    ];
+
+    for (const [propName, propSchema] of sortedProps) {
+      const pyType = this.schemaToType(propSchema);
+      const safeName = this.toSnakeCase(propName);
+      if (required.has(propName)) {
+        fields.push(`    ${safeName}: ${pyType}`);
+      } else {
+        const defaultVal = propSchema.type === 'array' ? 'field(default_factory=list)' : 'None';
+        const optType = propSchema.type === 'array' ? pyType : `Optional[${pyType}]`;
+        fields.push(`    ${safeName}: ${optType} = ${defaultVal}`);
+      }
+    }
+
+    if (!fields.length) {
+      fields.push('    pass');
+    }
+
+    const lines = ['@dataclass', `class ${name}:`, ...fields];
+    if (schema.description) {
+      lines.splice(1, 0, `    """${schema.description}"""`);
+      // move docstring inside the class
+      lines[1] = `class ${name}:`;
+      lines.splice(2, 0, `    """${schema.description}"""`);
+      lines.splice(1, 1);
+    }
+    return lines;
+  }
+
+  private schemaToType(schema: SchemaObject): string {
+    if (schema.$ref) {
+      return schema.$ref.split('/').pop()!;
+    }
+    if (schema['x-schema-name']) return schema['x-schema-name'];
+    if (schema.oneOf ?? schema.anyOf) {
+      const variants = (schema.oneOf ?? schema.anyOf)!.map((s) => this.schemaToType(s));
+      return `Union[${variants.join(', ')}]`;
+    }
+    if (schema.nullable) {
+      const inner = this.schemaToType({ ...schema, nullable: false });
+      return `Optional[${inner}]`;
+    }
+    switch (schema.type) {
+      case 'string':  return schema.format === 'date-time' ? 'str' : 'str';
+      case 'integer': return 'int';
+      case 'number':  return 'float';
+      case 'boolean': return 'bool';
+      case 'array':   return `List[${schema.items ? this.schemaToType(schema.items) : 'Any'}]`;
+      case 'object':  return 'dict[str, Any]';
+      default:        return 'Any';
+    }
+  }
+
+  // ── Client rendering ─────────────────────────────────────────────────────
 
   private renderClient(
     className: string,
@@ -24,13 +129,13 @@ export default class PythonGenerator {
     operations: ReturnType<OpenAPIParser['getOperations']>
   ): string {
     const methods = operations.map((op) => this.renderMethod(op)).join('\n\n');
-
     return `"""
 ${spec.info.title} v${spec.info.version} — auto-generated by Steel Core
-${spec.info.description ? `\n${spec.info.description}\n` : ''}"""
+"""
 from __future__ import annotations
 from typing import Any, Optional
 import httpx
+from .models import *
 
 
 class ${className}:
@@ -57,31 +162,54 @@ ${methods}
 
     const pathParams = (op.operation.parameters ?? [])
       .filter((p) => p.in === 'path')
-      .map((p) => `${this.toSnakeCase(p.name)}: str`);
+      .map((p) => `${this.toSnakeCase(p.name)}: ${this.schemaToType(p.schema)}`);
 
     const queryParams = (op.operation.parameters ?? [])
       .filter((p) => p.in === 'query')
-      .map((p) => `${this.toSnakeCase(p.name)}: Optional[str] = None`);
+      .map((p) => {
+        const t = this.schemaToType(p.schema);
+        return `${this.toSnakeCase(p.name)}: Optional[${t}] = None`;
+      });
 
-    const hasBody = !!op.operation.requestBody;
-    const bodyParam = hasBody ? ['body: Optional[dict[str, Any]] = None'] : [];
+    const bodySchema = op.operation.requestBody
+      ? this.parser.getRequestBodySchema(op.operation)
+      : null;
+    const bodyType = bodySchema?.['x-schema-name'] ?? (bodySchema ? 'dict[str, Any]' : null);
+    const bodyParam = bodyType ? [`body: Optional[${bodyType}] = None`] : [];
+
+    const returnSchema = this.parser.getResponseSchema(op.operation);
+    const returnType = returnSchema?.['x-schema-name'] ?? (returnSchema ? this.schemaToType(returnSchema) : 'Any');
 
     const allParams = ['self', ...pathParams, ...queryParams, ...bodyParam].join(', ');
     const urlPath = op.path.replace(/{(\w+)}/g, '{$1}');
-    const docstring = op.operation.summary ?? op.operation.description ?? '';
+    const doc = op.operation.summary ?? op.operation.description ?? '';
 
-    return `    def ${name}(${allParams}) -> Any:
-        """${docstring}"""
-        resp = self._client.${op.method}(f"${urlPath}"${hasBody ? ', json=body' : ''})
+    const queryArgs = (op.operation.parameters ?? [])
+      .filter((p) => p.in === 'query')
+      .map((p) => `"${p.name}": ${this.toSnakeCase(p.name)}`);
+    const paramsArg = queryArgs.length
+      ? `, params={k: v for k, v in {${queryArgs.join(', ')}}.items() if v is not None}`
+      : '';
+
+    return `    def ${name}(${allParams}) -> ${returnType}:
+        """${doc}"""
+        resp = self._client.${op.method}(f"${urlPath}"${bodyType ? ', json=body' : ''}${paramsArg})
         resp.raise_for_status()
         return resp.json()`;
   }
+
+  // ── Helpers ──────────────────────────────────────────────────────────────
 
   private toClassName(title: string): string {
     return title.replace(/[^a-zA-Z0-9]/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase()).replace(/\s/g, '') + 'Client';
   }
 
   private toSnakeCase(str: string): string {
-    return str.replace(/([A-Z])/g, '_$1').toLowerCase().replace(/^_/, '').replace(/[^a-z0-9_]/g, '_');
+    return str
+      .replace(/([A-Z])/g, '_$1')
+      .toLowerCase()
+      .replace(/^_/, '')
+      .replace(/[^a-z0-9_]/g, '_')
+      .replace(/_+/g, '_');
   }
 }
