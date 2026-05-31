@@ -22,6 +22,7 @@
       "^@steel-core/core$": "<rootDir>/packages/core/src/parser.ts",
       "^@steel-core/generator-python$": "<rootDir>/packages/generators/python/src/index.ts",
       "^@steel-core/generator-typescript$": "<rootDir>/packages/generators/typescript/src/index.ts",
+      "^@steel-core/generator-go$": "<rootDir>/packages/generators/go/src/index.ts",
       "^\\.\\./\\.\\./generators/python/src/index$": "<rootDir>/packages/generators/python/src/index.ts",
       "^\\.\\./\\.\\./generators/typescript/src/index$": "<rootDir>/packages/generators/typescript/src/index.ts"
     }
