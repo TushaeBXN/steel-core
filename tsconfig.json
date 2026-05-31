@@ -16,6 +16,7 @@
       "@steel-core/generator-typescript": ["./packages/generators/typescript/src/index.ts"],
       "@steel-core/generator-go": ["./packages/generators/go/src/index.ts"],
       "@steel-core/generator-ruby": ["./packages/generators/ruby/src/index.ts"],
+      "@steel-core/generator-java": ["./packages/generators/java/src/index.ts"],
       "@steel-core/mcp-server": ["./packages/mcp-server/src/index.ts"],
       "@modelcontextprotocol/sdk/server/index.js": ["./node_modules/@modelcontextprotocol/sdk/dist/cjs/server/index.d.ts"],
       "@modelcontextprotocol/sdk/server/stdio.js": ["./node_modules/@modelcontextprotocol/sdk/dist/cjs/server/stdio.d.ts"],

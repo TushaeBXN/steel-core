@@ -1,0 +1,8 @@
+{
+  "name": "@steel-core/generator-java",
+  "version": "0.1.0",
+  "main": "dist/index.js",
+  "scripts": { "build": "tsc" },
+  "dependencies": { "@steel-core/core": "*" },
+  "devDependencies": { "typescript": "^5.0.0", "@types/node": "^20.0.0" }
+}
