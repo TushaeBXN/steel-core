@@ -10,7 +10,8 @@
   },
   "dependencies": {
     "@steel-core/core": "*",
-    "@steel-core/generators": "*"
+    "@steel-core/generator-python": "*",
+    "@steel-core/generator-typescript": "*"
   },
   "devDependencies": {
     "typescript": "^5.0.0",
