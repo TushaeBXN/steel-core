@@ -10,7 +10,8 @@ RUN apk add --no-cache python3 py3-pip && ln -sf python3 /usr/bin/python
 RUN addgroup -g 1001 -S nodejs && adduser -S nodejs -u 1001
 RUN mkdir -p /sandbox && chown nodejs:nodejs /sandbox
 WORKDIR /app
-COPY --from=builder --chown=nodejs:nodejs /app/packages/mcp-server/dist ./dist
+COPY --from=builder --chown=nodejs:nodejs /app/dist/mcp-server/src ./dist
+COPY --from=builder --chown=nodejs:nodejs /app/dist/core/src ./dist/core
 COPY --from=builder --chown=nodejs:nodejs /app/node_modules ./node_modules
 USER nodejs
 ENV NODE_ENV=production
