@@ -1,0 +1,19 @@
+{
+  "name": "@steel-core/cli",
+  "version": "0.1.0",
+  "bin": {
+    "steel": "dist/index.js"
+  },
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc"
+  },
+  "dependencies": {
+    "@steel-core/core": "*",
+    "@steel-core/generators": "*"
+  },
+  "devDependencies": {
+    "typescript": "^5.0.0",
+    "@types/node": "^20.0.0"
+  }
+}
