@@ -2,6 +2,13 @@
 
 Open-source API SDK generator and MCP server. MIT licensed. Self-hostable alternative to Stainless.
 
+Why I built this?
+Commercial SDK generators do one thing well: they turn OpenAPI specs into idiomatic client libraries. But they're closed source, priced per seat, and lock you into their cloud. Steel Core is the answer to that.
+
+Built in one session from zero to v1.0.0, it generates SDKs in eight languages, each with proper retry logic, pagination helpers, and async support. It runs anywhere Docker runs, includes an MCP server for LLM integration, and is MIT licensed.
+
+No meetings. No sales calls. No vendor lock-in. Just steel generate -i spec.json -l python and you're shipping.
+
 ## Quick Start
 
 ```bash
