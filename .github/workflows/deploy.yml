@@ -61,7 +61,7 @@ jobs:
 
   deploy-production:
     needs: build-and-push
-    if: startsWith(github.ref, 'refs/tags/')
+    if: startsWith(github.ref, 'refs/tags/') && vars.K8S_DEPLOY_ENABLED == 'true'
     runs-on: ubuntu-latest
     environment: production
     steps:
