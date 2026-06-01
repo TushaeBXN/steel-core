@@ -1,4 +1,6 @@
 # Steel Core
+<img width="1408" height="768" alt="STEELCOREImage_kdmr4skdmr4skdmr" src="https://github.com/user-attachments/assets/5eba1b0f-02c6-4696-9e3f-b1cae2f4bda7" />
+
 
 Open-source API SDK generator and MCP server. MIT licensed. Self-hostable alternative to Stainless.
 
