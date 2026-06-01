@@ -26,6 +26,7 @@
       "^@steel-core/generator-ruby$": "<rootDir>/packages/generators/ruby/src/index.ts",
       "^@steel-core/generator-java$": "<rootDir>/packages/generators/java/src/index.ts",
       "^@steel-core/generator-csharp$": "<rootDir>/packages/generators/csharp/src/index.ts",
+      "^@steel-core/generator-php$": "<rootDir>/packages/generators/php/src/index.ts",
       "^\\.\\./\\.\\./generators/python/src/index$": "<rootDir>/packages/generators/python/src/index.ts",
       "^\\.\\./\\.\\./generators/typescript/src/index$": "<rootDir>/packages/generators/typescript/src/index.ts"
     }
