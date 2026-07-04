@@ -24,12 +24,20 @@ const SPEC = {
         },
         responses: { '201': { description: 'Created', content: { 'application/json': { schema: { $ref: '#/components/schemas/Pet' } } } } },
       },
+      head: {
+        operationId: 'checkPets',
+        responses: { '204': { description: 'No content' } },
+      },
     },
     '/pets/{id}': {
       get: {
         operationId: 'getPet',
         parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }],
         responses: { '200': { description: 'A pet', content: { 'application/json': { schema: { $ref: '#/components/schemas/Pet' } } } } },
+      },
+      options: {
+        operationId: 'petOptions',
+        responses: { '204': { description: 'No content' } },
       },
     },
   },
@@ -113,8 +121,14 @@ describe('OpenAPIParser', () => {
 
   test('getOperations returns all methods', () => {
     const ops = parser.getOperations(SPEC as never);
-    expect(ops).toHaveLength(3);
-    expect(ops.map((o) => o.operation.operationId)).toEqual(['listPets', 'createPet', 'getPet']);
+    expect(ops).toHaveLength(5);
+    expect(ops.map((o) => o.operation.operationId)).toEqual([
+      'listPets',
+      'createPet',
+      'checkPets',
+      'getPet',
+      'petOptions',
+    ]);
   });
 
   test('getResponseSchema resolves $ref on response', () => {
