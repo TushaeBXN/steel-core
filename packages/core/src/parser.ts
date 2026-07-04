@@ -20,6 +20,9 @@ export interface PathItem {
   put?: Operation;
   patch?: Operation;
   delete?: Operation;
+  options?: Operation;
+  head?: Operation;
+  trace?: Operation;
   parameters?: Parameter[];
 }
 
@@ -95,6 +98,10 @@ export interface OAuthFlow {
 }
 
 export type SecurityRequirement = Record<string, string[]>;
+
+export const HTTP_METHODS = ['get', 'post', 'put', 'patch', 'delete', 'options', 'head', 'trace'] as const;
+
+export type HTTPMethod = typeof HTTP_METHODS[number];
 
 // ─── Resolved model (output of schema resolution) ────────────────────────────
 
@@ -249,9 +256,8 @@ export class OpenAPIParser {
 
   getOperations(spec: OpenAPISpec): Array<{ path: string; method: string; operation: Operation }> {
     const ops: Array<{ path: string; method: string; operation: Operation }> = [];
-    const methods = ['get', 'post', 'put', 'patch', 'delete'] as const;
     for (const [path, item] of Object.entries(spec.paths)) {
-      for (const method of methods) {
+      for (const method of HTTP_METHODS) {
         const op = item[method];
         if (op) ops.push({ path, method, operation: op });
       }

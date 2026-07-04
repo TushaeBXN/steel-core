@@ -80,6 +80,56 @@ const PAGINATED_SPEC = {
   },
 };
 
+const XQUIK_SPEC = {
+  openapi: '3.1.0',
+  info: { title: 'Xquik API', version: '1.0.0' },
+  paths: {
+    '/api/v1/x/tweets/search': {
+      get: {
+        operationId: 'searchTweets',
+        summary: 'Search X posts',
+        parameters: [
+          { name: 'query', in: 'query', required: true, schema: { type: 'string' } },
+          { name: 'limit', in: 'query', schema: { type: 'integer' } },
+        ],
+        responses: {
+          '200': {
+            description: 'Search results',
+            content: { 'application/json': { schema: { $ref: '#/components/schemas/TweetSearchResponse' } } },
+          },
+        },
+      },
+    },
+  },
+  components: {
+    securitySchemes: {
+      apiKey: {
+        type: 'apiKey',
+        in: 'header',
+        name: 'x-api-key',
+      },
+    },
+    schemas: {
+      TweetSearchResponse: {
+        type: 'object',
+        required: ['items'],
+        properties: {
+          items: { type: 'array', items: { $ref: '#/components/schemas/Tweet' } },
+          next_cursor: { type: 'string', nullable: true },
+        },
+      },
+      Tweet: {
+        type: 'object',
+        required: ['id', 'text'],
+        properties: {
+          id: { type: 'string' },
+          text: { type: 'string' },
+        },
+      },
+    },
+  },
+};
+
 function tmpDir(): string {
   return fs.mkdtempSync(path.join(os.tmpdir(), 'steelcore-test-'));
 }
@@ -218,5 +268,20 @@ describe('TypeScriptGenerator', () => {
     const src = read(outDir, 'client.ts');
     expect(src).toContain('getWidget');
     expect(src).toContain('Promise<Models.Widget>');
+  });
+
+  test('uses OpenAPI apiKey header names instead of forcing bearer auth', async () => {
+    const xquikOutDir = tmpDir();
+    try {
+      const gen = new TypeScriptGenerator();
+      const parser = new OpenAPIParser();
+      const spec = parser.parse(XQUIK_SPEC);
+      await gen.generate(spec, xquikOutDir);
+      const src = read(xquikOutDir, 'client.ts');
+      expect(src).toContain("headers['x-api-key'] = options.apiKey;");
+      expect(src).not.toContain("headers['Authorization'] = `Bearer ${options.apiKey}`;");
+    } finally {
+      fs.rmSync(xquikOutDir, { recursive: true, force: true });
+    }
   });
 });
